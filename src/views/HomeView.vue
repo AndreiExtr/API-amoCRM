@@ -11,7 +11,7 @@
         </select>
       </div>
 
-      <!-- Форма для ввода данных о сделке -->
+      <!-- Форма для сделки -->
       <div v-if="isModalVisible" class="modal">
         <div v-if="selectedItem === 'deal'" class="deal-form">
           <div class="deal-form__name">
@@ -40,6 +40,42 @@
             </button>
           </div>
         </div>
+
+        <!-- Форма для компании -->
+        <div v-else-if="selectedItem === 'company'" class="company-form">
+          <div class="form__field">
+            <label for="company-name">Название компании:</label>
+            <input type="text" id="company-name" v-model="newCompany.name" placeholder="Введите название компании" />
+          </div>
+          <div class="form__buttons">
+            <button class="create__button" :disabled="!newCompany.name" @click="createCompany">
+              Создать
+            </button>
+            <button class="cancel__button" @click="resetForm">Отмена</button>
+          </div>
+        </div>
+
+        <!-- Форма для контакта -->
+        <div v-else-if="selectedItem === 'contact'" class="contact-form">
+          <div class="form__field">
+            <label for="contact-name">Название контакта:</label>
+            <input type="text" id="contact-name" v-model="newContact.name" placeholder="Введите название контакта" />
+          </div>
+          <div class="form__field">
+            <label for="contact-first-name">Имя:</label>
+            <input type="text" id="contact-first-name" v-model="newContact.firstName" placeholder="Введите имя" />
+          </div>
+          <div class="form__field">
+            <label for="contact-last-name">Фамилия:</label>
+            <input type="text" id="contact-last-name" v-model="newContact.lastName" placeholder="Введите фамилию" />
+          </div>
+          <div class="form__buttons">
+            <button class="create__button" :disabled="!newContact.name || !newContact.firstName || !newContact.lastName" @click="createContact">
+              Создать
+            </button>
+            <button class="cancel__button" @click="resetForm">Отмена</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -52,7 +88,6 @@
         {{ tab.label }}
       </button>
     </div>
-
     <div class="tab-content">
       <table v-if="activeTab === 'deal'" class="deal-table">
         <thead>
@@ -123,6 +158,14 @@ export default {
         name: '',
         price: null
       },
+      newCompany: {
+        name: ''
+      },
+      newContact: {
+        name: '',
+        firstName: '',
+        lastName: ''
+      },
       tabs: [
         { value: 'deal', label: 'Сделки' },
         { value: 'company', label: 'Компании' },
@@ -145,22 +188,49 @@ export default {
   watch: {
     activeTab (newTab) {
       this.handleTabChange(newTab)
+      // Сохраняется текущая вкладка в sessionStorage
       sessionStorage.setItem('activeTab', newTab)
     }
   },
   mounted () {
+    // Проверка, есть ли сохранённая вкладка в sessionStorage
     const savedTab = sessionStorage.getItem('activeTab')
     if (savedTab && this.tabs.some(tab => tab.value === savedTab)) {
       this.activeTab = savedTab
     } else {
+      // Если сохранённой вкладки нет, то устанавливается первая вкладка как активная
       this.activeTab = this.tabs[0].value
     }
     this.handleTabChange(this.activeTab)
   },
   methods: {
-    async createDeal () {
-      console.log('Данные перед отправкой:', this.newDeal)
+    async createCompany () {
+      console.log('Отправляемая информация:', this.newCompany)
+      try {
+        const response = await axios.post('http://localhost:3000/create-company', this.newCompany, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.accessToken}`
+          }
+        })
 
+        if (response.data.createdCompany) {
+          console.log('Добавляем новую компанию:', response.data.createdCompany)
+
+          this.companies.push({
+            id: response.data.createdCompany.id,
+            name: this.newCompany.name
+          })
+
+          console.log('Обновленный список компаний:', this.companies)
+
+          this.isModalVisible = false
+        }
+      } catch (error) {
+        console.error('Ошибка при добавлении компании:', error)
+      }
+    },
+    async createDeal () {
       try {
         const response = await axios.post('http://localhost:3000/create-deal', this.newDeal, {
           headers: {
@@ -220,10 +290,10 @@ export default {
         if (data.companies) {
           this.companies = data.companies
         } else {
-          console.error('Ошибка:', data.error || 'Не удалось загрузить компнаии')
+          console.error('Ошибка:', data.error || 'Не удалось загрузить компании')
         }
       } catch (error) {
-        console.error('Ошибка при загрузке компании:', error)
+        console.error('Ошибка при загрузке компаний:', error)
       }
     },
     async fetchContacts () {
@@ -256,8 +326,9 @@ export default {
       }
     },
     resetForm () {
-      this.newDeal.name = ''
-      this.newDeal.price = 0
+      this.newDeal = { name: '', price: null }
+      this.newCompany = { name: '' }
+      this.newContact = { name: '', firstName: '', lastName: '' }
       this.selectedItem = 'none'
     }
   }
@@ -318,6 +389,166 @@ export default {
         }
 
         &__bt{
+          width: 100%;
+          display: flex;
+          flex-direction: row;
+          justify-content: flex-end;
+          gap: 24px;
+
+          .cancel__button {
+            background-color: #f44336;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+
+            &:hover{
+              background-color: #e53935;
+            }
+          }
+
+          .create__button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: green;
+            color: rgb(255, 255, 255);
+            transition: background-color 0.3s, color 0.3s;
+
+            &:hover {
+              background-color: rgb(0, 105, 0);
+              color: white;
+            }
+
+            &:active {
+              background-color: rgb(0, 65, 0);
+              color: white;
+            }
+
+            &:disabled {
+              background-color: rgb(236, 236, 236);
+              color: rgb(179, 179, 179);
+              cursor: not-allowed;
+            }
+          }
+        }
+
+        input{
+          width: 100%;
+          height: 32px;
+          border: solid 1px #ddd;
+          padding: 0 4px;
+        }
+      }
+
+      .company-form{
+        width: 350px;
+        height: auto;
+        background-color: #ffffff;
+        border: solid 1px #ddd;
+        border-radius: 3px;
+        display: flex;
+        gap: 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 8px;
+        box-shadow: 0 4px 6px rgba(5, 5, 5, 0.3);
+
+        .form__field{
+          text-align: left;
+          width: 100%;
+        }
+
+        &__quantity{
+          text-align: left;
+          width: 100%;
+        }
+
+        .form__buttons{
+          width: 100%;
+          display: flex;
+          flex-direction: row;
+          justify-content: flex-end;
+          gap: 24px;
+
+          .cancel__button {
+            background-color: #f44336;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+
+            &:hover{
+              background-color: #e53935;
+            }
+          }
+
+          .create__button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: green;
+            color: rgb(255, 255, 255);
+            transition: background-color 0.3s, color 0.3s;
+
+            &:hover {
+              background-color: rgb(0, 105, 0);
+              color: white;
+            }
+
+            &:active {
+              background-color: rgb(0, 65, 0);
+              color: white;
+            }
+
+            &:disabled {
+              background-color: rgb(236, 236, 236);
+              color: rgb(179, 179, 179);
+              cursor: not-allowed;
+            }
+          }
+        }
+
+        input{
+          width: 100%;
+          height: 32px;
+          border: solid 1px #ddd;
+          padding: 0 4px;
+        }
+      }
+
+      .contact-form{
+        width: 350px;
+        height: auto;
+        background-color: #ffffff;
+        border: solid 1px #ddd;
+        border-radius: 3px;
+        display: flex;
+        gap: 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 8px;
+        box-shadow: 0 4px 6px rgba(5, 5, 5, 0.3);
+
+        .form__field{
+          text-align: left;
+          width: 100%;
+        }
+
+        &__quantity{
+          text-align: left;
+          width: 100%;
+        }
+
+        .form__buttons{
           width: 100%;
           display: flex;
           flex-direction: row;

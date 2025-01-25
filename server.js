@@ -71,6 +71,40 @@ app.post('/create-deal', async (req, res) => {
   }
 });
 
+// СОЗДАНИЕ КОМПАНИИ ЧЕРЕЗ API amoCRM
+app.post('/create-company', async (req, res) => {
+  const { name } = req.body;
+  
+  try {
+    const response = await axios.post(
+      `https://${baseDomain}/api/v4/companies`,
+      { companies: [{ name }] },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (response.data._embedded && response.data._embedded.companies) {
+      const createdCompany = response.data._embedded.companies[0];
+      console.log('Созданная компания:', createdCompany);
+      res.status(200).json({
+        createdCompany: {
+          id: createdCompany.id,
+          name: createdCompany.name
+        },
+      });
+    } else {
+      throw new Error('Ответ от API не содержит данных о компании');
+    }
+  } catch (error) {
+    console.error('Ошибка при создании компании:', error.message);
+    res.status(500).json({ error: 'Ошибка при создании компании', details: error.message });
+  }
+});
+
 // ПОЛУЧЕНИЕ СПИСКА СДЕЛОК ЧЕРЕЗ API amoCRM
 app.get('/get-deals', async (req, res) => {
   if (!accessToken || !baseDomain) {
