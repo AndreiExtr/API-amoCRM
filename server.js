@@ -100,6 +100,60 @@ app.get('/get-deals', async (req, res) => {
 });
 
 
+// ПОЛУЧЕНИЕ СПИСКА КОМПАНИИ   ЧЕРЕЗ API amoCRM
+app.get('/get-companies', async (req, res) => {
+  if (!accessToken || !baseDomain) {
+    return res.status(400).json({ error: 'Токен или базовый домен не настроены. Сначала выполните /get-token.' });
+  }
+
+  try {
+    const response = await axios.get(`https://${baseDomain}/api/v4/companies`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const companies = response.data._embedded.companies.map(company => ({
+      id: company.id,
+      name: company.name
+    }));
+
+    res.json({ message: 'Список компании успешно получен', companies });
+  } catch (error) {
+    console.error('Ошибка при получении компании:', error.message);
+    res.status(500).json({ error: 'Не удалось получить список компании', details: error.response?.data || error.message });
+  }
+});
+
+// ПОЛУЧЕНИЕ СПИСКА КОНТАТКОВ  ЧЕРЕЗ API amoCRM
+app.get('/get-contacts', async (req, res) => {
+  if (!accessToken || !baseDomain) {
+    return res.status(400).json({ error: 'Токен или базовый домен не настроены. Сначала выполните /get-token.' });
+  }
+
+  try {
+    const response = await axios.get(`https://${baseDomain}/api/v4/contacts`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const contacts = response.data._embedded.contacts.map(contact => ({
+      id: contact.id,
+      name: contact.name,
+      first_name: contact.first_name,
+      last_name: contact.last_name
+    }));
+
+    res.json({ message: 'Список контактов успешно получен', contacts });
+  } catch (error) {
+    console.error('Ошибка при получении контактов:', error.message);
+    res.status(500).json({ error: 'Не удалось получить список контактов', details: error.response?.data || error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Сервер запущен на http://localhost:${PORT}`);
 });

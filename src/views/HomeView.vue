@@ -72,8 +72,38 @@
           </tr>
         </tbody>
       </table>
-      <p v-else-if="activeTab === 'company'">Содержимое вкладки "Компании"</p>
-      <p v-else-if="activeTab === 'contact'">Содержимое вкладки "Контакты"</p>
+      <table v-else-if="activeTab === 'company'" class="company-table">
+        <thead>
+          <tr>
+            <th>ID Компании</th>
+            <th>Название</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="company in companies" :key="company.id">
+            <td>{{ company.id }}</td>
+            <td>{{ company.name }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <table v-else-if="activeTab === 'contact'" class="contact-table">
+        <thead>
+          <tr>
+            <th>ID Контакта</th>
+            <th>Название</th>
+            <th>Имя</th>
+            <th>Фамилия</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="contact in contacts" :key="contact.id">
+            <td>{{ contact.id }}</td>
+            <td>{{ contact.name }}</td>
+            <td>{{ contact.first_name }}</td>
+            <td>{{ contact.last_name }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
@@ -99,7 +129,9 @@ export default {
         { value: 'contact', label: 'Контакты' }
       ],
       activeTab: 'deal',
-      deals: []
+      deals: [],
+      companies: [],
+      contacts: []
     }
   },
   computed: {
@@ -111,12 +143,19 @@ export default {
     }
   },
   watch: {
-    activeTab: 'handleTabChange'
+    activeTab (newTab) {
+      this.handleTabChange(newTab)
+      sessionStorage.setItem('activeTab', newTab)
+    }
   },
   mounted () {
-    if (this.activeTab === 'deal') {
-      this.handleTabChange('deal')
+    const savedTab = sessionStorage.getItem('activeTab')
+    if (savedTab && this.tabs.some(tab => tab.value === savedTab)) {
+      this.activeTab = savedTab
+    } else {
+      this.activeTab = this.tabs[0].value
     }
+    this.handleTabChange(this.activeTab)
   },
   methods: {
     async createDeal () {
@@ -166,6 +205,40 @@ export default {
         } catch (error) {
           console.error('Ошибка при загрузке сделок:', error)
         }
+      } else if (newTab === 'company') {
+        await this.fetchCompanies()
+      } else if (newTab === 'contact') {
+        await this.fetchContacts()
+      }
+    },
+    async fetchCompanies () {
+      await this.getToken()
+      try {
+        const response = await fetch('http://localhost:3000/get-companies')
+        const data = await response.json()
+
+        if (data.companies) {
+          this.companies = data.companies
+        } else {
+          console.error('Ошибка:', data.error || 'Не удалось загрузить компнаии')
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке компании:', error)
+      }
+    },
+    async fetchContacts () {
+      await this.getToken()
+      try {
+        const response = await fetch('http://localhost:3000/get-contacts')
+        const data = await response.json()
+
+        if (data.contacts) {
+          this.contacts = data.contacts
+        } else {
+          console.error('Ошибка:', data.error || 'Не удалось загрузить контакты')
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке контакты:', error)
       }
     },
     async getToken () {
@@ -330,7 +403,9 @@ export default {
     margin-top: 20px;
     font-size: 16px;
 
-    .deal-table {
+    .deal-table,
+    .company-table,
+    .contact-table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
