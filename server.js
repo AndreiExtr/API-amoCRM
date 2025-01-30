@@ -89,7 +89,6 @@ app.post('/create-company', async (req, res) => {
 
     if (response.data._embedded && response.data._embedded.companies) {
       const createdCompany = response.data._embedded.companies[0];
-      console.log('Созданная компания:', createdCompany);
       res.status(200).json({
         createdCompany: {
           id: createdCompany.id,
